@@ -15,6 +15,10 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
+# ADDED
+import dj_database_url
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
@@ -23,13 +27,23 @@ load_dotenv(BASE_DIR / '.env')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-sj*%vr6ck)fai&20d1e13)hweprns4oie81#7u(@#2404cbo3+'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# CHANGED
+# Do NOT put the actual secret key directly here.
+SECRET_KEY = os.getenv('SECRET_KEY', 'dev-only-secret-key')
 
-ALLOWED_HOSTS = ['localhost','127.0.0.1']
+
+# CHANGED
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+
+
+# CHANGED
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# ADDED
+# Render provides this automatically.
+if os.getenv('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS.append(os.getenv('RENDER_EXTERNAL_HOSTNAME'))
 
 
 # Application definition
@@ -57,8 +71,13 @@ INSTALLED_APPS = [
     'cloudinary_storage'
 ]
 
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+
+    # ADDED
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -68,7 +87,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 ROOT_URLCONF = 'config.urls'
+
 
 TEMPLATES = [
     {
@@ -85,22 +106,42 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
+
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+
+# CHANGED
+# If DATABASE_URL exists, use it.
+# Render will provide DATABASE_URL.
+# Otherwise, use your existing local PostgreSQL settings.
+
+if os.getenv('DATABASE_URL'):
+
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=not DEBUG,
+        )
     }
-}
+
+else:
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+        }
+    }
 
 
 # Password validation
@@ -139,6 +180,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# ADDED
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -149,7 +193,9 @@ MAILERS = {
     },
 }
 
+
 AUTH_USER_MODEL='accounts.User'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -171,10 +217,12 @@ REST_FRAMEWORK = {
     },
 }
 
+
 SIMPLE_JWT={
     'ACCESS_TOKEN_LIFETIME':timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME':timedelta(days=7)
 }
+
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -182,22 +230,30 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
 }
 
+
+# CHANGED
+# Keep Cloudinary for uploaded files.
+# Use WhiteNoise for static files.
+
 STORAGES = {
     'default': {
         'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
 
+
 CORS_ALLOW_ALL_ORIGINS=True
+
 
 # Security settings
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
+
 
 CHANNEL_LAYERS={
     'default':{
