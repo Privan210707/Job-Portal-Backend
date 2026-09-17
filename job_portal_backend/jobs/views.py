@@ -2,7 +2,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import PermissionDenied
-
+from accounts.models import UserRole
 from .models import Job
 from .serializers import JobSerializer
 
@@ -45,3 +45,28 @@ class JobListCreateView(generics.ListCreateAPIView):
 
         company = self.request.user.company
         serializer.save(company=company)
+
+class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = JobSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        return Job.objects.all()
+    
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+
+        # Candidates can view jobs but cannot edit/delete them
+        if request.method == 'GET':
+            return
+        
+        # Only recruiters can update/delete jobs
+        if request.user.role != UserRole.RECRUITER:
+            raise PermissionDenied(
+                "Only recruiters can update or delete jobs."
+            )
+
+        # Only the recruiter who owns the job can update/delete it
+        if obj.company.recruiter != request.user:
+            raise PermissionDenied(
+                "You can only modify your own jobs."
+            )

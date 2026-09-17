@@ -1,4 +1,5 @@
 from django.db import models
+from secure_storage import SecureResumeStorage
 
 # Create your models here.
 
@@ -25,6 +26,7 @@ class Application(models.Model):
     )
     resume = models.FileField(
         upload_to='resumes/',
+        storage=SecureResumeStorage(),
         blank=True,
         null=True
     )

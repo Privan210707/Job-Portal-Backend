@@ -21,6 +21,7 @@ class JobSerializer(serializers.ModelSerializer):
             'experience_max',
             'salary_min',
             'salary_max',
+            'deadline',
             'is_active',
             'created_at',
             'updated_at',

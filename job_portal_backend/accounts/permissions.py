@@ -26,3 +26,12 @@ class IsAdmin(BasePermission):
             request.user.is_authenticated
             and request.user.role == UserRole.ADMIN
         )
+
+class IsNotBlocked(BasePermission):
+    message = "Your account has been blocked."
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and not request.user.is_blocked
+        )    
